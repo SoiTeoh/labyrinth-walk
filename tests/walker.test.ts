@@ -5,10 +5,12 @@ import { buildLabyrinth } from '../src/logic/labyrinth';
 import { createTrack, pointAt } from '../src/logic/pathTrack';
 import {
   createWalker,
+  isCompleted,
   move,
   press,
   progress,
   release,
+  resetWalker,
   walkerPosition,
   type WalkerState,
 } from '../src/logic/walker';
@@ -159,5 +161,47 @@ describe('抬起', () => {
     expect(distance(at, pointAt(track, 1234))).toBe(0);
     expect(press(released, track, at, t).mode).toBe('walking');
     expect(press(released, track, lab.start, t).mode).toBe('idle');
+  });
+});
+
+describe('完成与重开 (Task 6)', () => {
+  it('到达终点后进入 completed 状态', () => {
+    const nearEnd = walkingAt(track.total - 1);
+    const completed = move(nearEnd, track, lab.end, t);
+    expect(completed.mode).toBe('completed');
+    expect(completed.s).toBe(track.total);
+    expect(isCompleted(completed)).toBe(true);
+  });
+
+  it('completed 状态下不能继续移动或推进路程', () => {
+    const completedState: WalkerState = { mode: 'completed', s: track.total };
+    const moved = move(completedState, track, { x: lab.end.x + 20, y: lab.end.y }, t);
+    expect(moved.mode).toBe('completed');
+    expect(moved.s).toBe(track.total);
+  });
+
+  it('completed 状态下按下不触发行走', () => {
+    const completedState: WalkerState = { mode: 'completed', s: track.total };
+    const pressed = press(completedState, track, lab.end, t);
+    expect(pressed.mode).toBe('completed');
+  });
+
+  it('completed 状态下抬起保持 completed', () => {
+    const completedState: WalkerState = { mode: 'completed', s: track.total };
+    const released = release(completedState);
+    expect(released.mode).toBe('completed');
+  });
+
+  it('达到 99.5% 阈值时抬起直接吸附到中心并进入完成状态', () => {
+    const stateAt997: WalkerState = { mode: 'walking', s: track.total * 0.996 };
+    const released = release(stateAt997, track, 0.995);
+    expect(released.mode).toBe('completed');
+    expect(released.s).toBe(track.total);
+  });
+
+  it('resetWalker 重置为初始空闲状态', () => {
+    const reset = resetWalker();
+    expect(reset).toEqual({ mode: 'idle', s: 0 });
+    expect(progress(reset, track)).toBe(0);
   });
 });

@@ -13,6 +13,8 @@ export const tuning = {
     walkerRadius: 9,
     /** 行者外圈半径 */
     walkerHaloRadius: 15,
+    /** 行者外围触摸指示圈半径（大于常见手指遮挡范围） */
+    walkerTouchRadius: 26,
     /** 已走高亮线宽占路宽的比例 */
     walkedWidthRatio: 0.55,
     /** 顶部进度条 */
@@ -56,6 +58,18 @@ export const tuning = {
     maxStepPerEvent: 30,
     /** 离终点不到这个距离时直接吸附到终点，避免手指差一点点而停在 99% */
     endSnap: 2,
+    /** 完成判定的进度阈值 */
+    completeThreshold: 0.995,
+  },
+  hint: {
+    /** 偏离多少毫秒后触发提示 */
+    delayMs: 300,
+    /** 偏离提示文案 */
+    message: '回到小路上继续',
+  },
+  complete: {
+    title: '你走到了中心',
+    buttonText: '再走一次',
   },
 } as const;
 

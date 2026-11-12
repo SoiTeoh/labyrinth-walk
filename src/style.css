@@ -76,17 +76,65 @@ body {
   opacity: 0.35;
 }
 
-/* 偏离时行者变暗。完整的偏离提示在 Task 5 实现。 */
+/* 呼吸脉冲光环（偏离超过 300ms 时激活） */
+.walker-pulse {
+  fill: none;
+  stroke: var(--walked);
+  stroke-width: 1.5;
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: center;
+}
+
+#stage[data-hint='1'] .walker-pulse {
+  opacity: 0.85;
+  animation: pulse-breathing 2s ease-in-out infinite;
+}
+
+@keyframes pulse-breathing {
+  0% {
+    r: 16px;
+    opacity: 0.85;
+  }
+  50% {
+    r: 32px;
+    opacity: 0.2;
+  }
+  100% {
+    r: 16px;
+    opacity: 0.85;
+  }
+}
+
+/* 外围触摸指示圈：手指触控时向外微露，防止遮挡完全遮住行者 */
+.walker-touch {
+  fill: none;
+  stroke: var(--walker);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+#stage[data-mode='walking'] .walker-touch {
+  opacity: 0.45;
+}
+
+/* 偏离时行者变暗 */
 #stage[data-mode='off'] .walker {
-  opacity: 0.55;
+  opacity: 0.75;
 }
 
 #stage[data-mode='walking'] .walker {
   cursor: grabbing;
 }
 
-.label,
-.hud-help {
+#stage[data-mode='completed'] .walker {
+  cursor: default;
+}
+
+.label {
   fill: var(--muted);
   font-size: 13px;
 }
@@ -95,6 +143,17 @@ body {
   fill: var(--text);
   font-size: 18px;
   letter-spacing: 2px;
+}
+
+.hud-reset {
+  fill: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: fill 0.2s ease;
+}
+
+.hud-reset:hover {
+  fill: var(--text);
 }
 
 .hud-percent {
@@ -111,6 +170,36 @@ body {
   fill: var(--walked);
 }
 
+.hud-help {
+  fill: var(--muted);
+  font-size: 13px;
+  transition: opacity 0.3s ease;
+}
+
+.hud-help.hud-help-fade {
+  opacity: 0.3;
+}
+
+.hud-help.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hud-hint {
+  fill: var(--walked);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.hud-hint.visible {
+  opacity: 1;
+}
+
+/* 调试视图 */
 .debug-line {
   stroke: #6fd3ff;
   stroke-width: 1;
@@ -130,4 +219,96 @@ body {
   fill: #6fd3ff;
   font-size: 11px;
   font-family: ui-monospace, Consolas, monospace;
+}
+
+/* 完成结算层 (Task 6) */
+.complete-overlay {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+.complete-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.complete-glow {
+  fill: var(--walked);
+  opacity: 0.12;
+  transform-origin: center;
+  transition: r 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease;
+}
+
+.complete-overlay.visible .complete-glow {
+  r: 76px;
+  opacity: 0.26;
+}
+
+.complete-card {
+  fill: #19202c;
+  stroke: var(--walked);
+  stroke-width: 1;
+  stroke-opacity: 0.3;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.45));
+}
+
+.complete-title {
+  fill: var(--text);
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+}
+
+.complete-time {
+  fill: var(--walked);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.95;
+}
+
+.complete-btn {
+  cursor: pointer;
+}
+
+.complete-btn-bg {
+  fill: var(--walked);
+  transition: fill 0.2s ease;
+}
+
+.complete-btn:hover .complete-btn-bg,
+.complete-btn:active .complete-btn-bg {
+  fill: #ffd18b;
+}
+
+.complete-btn-text {
+  fill: #1d2430;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+
+/* 减少动画设置适配 */
+@media (prefers-reduced-motion: reduce) {
+  .complete-overlay,
+  .complete-glow,
+  .complete-btn-bg,
+  .hud-help,
+  .hud-hint,
+  .walker-pulse,
+  .walker-touch {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  #stage[data-hint='1'] .walker-pulse {
+    r: 26px;
+    opacity: 0.6;
+  }
+
+  .complete-overlay.visible .complete-glow {
+    r: 76px;
+    opacity: 0.24;
+  }
 }

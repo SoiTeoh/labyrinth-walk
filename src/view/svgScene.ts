@@ -7,11 +7,12 @@ import { svgEl } from './svg';
 export interface Scene {
   /** 调试视图挂在这一层，位于行者下方 */
   debugLayer: SVGGElement;
-  render(s: number, walkerAt: Vec, mode: WalkMode): void;
+  render(s: number, walkerAt: Vec, mode: WalkMode, hintVisible?: boolean): void;
 }
 
 export function createScene(svg: SVGSVGElement, lab: Labyrinth, t: Tuning): Scene {
-  const { width, height, walkerRadius, walkerHaloRadius, walkedWidthRatio } = t.view;
+  const { width, height, walkerRadius, walkerHaloRadius, walkerTouchRadius, walkedWidthRatio } =
+    t.view;
   const { pathWidth, centerRadius } = t.maze;
 
   svgEl('rect', { class: 'bg', x: 0, y: 0, width, height }, svg);
@@ -45,19 +46,26 @@ export function createScene(svg: SVGSVGElement, lab: Labyrinth, t: Tuning): Scen
   const debugLayer = svgEl('g', { class: 'debug' }, svg);
 
   const walker = svgEl('g', { class: 'walker' }, svg);
+  // 呼吸脉冲光环（偏离超过 300ms 时激活）
+  svgEl('circle', { class: 'walker-pulse', r: walkerTouchRadius }, walker);
+  // 外围触摸指示圈（防止手指遮挡行者）
+  svgEl('circle', { class: 'walker-touch', r: walkerTouchRadius }, walker);
+  // 行者外圈
   svgEl('circle', { class: 'walker-halo', r: walkerHaloRadius }, walker);
+  // 行者中心实心圆点
   svgEl('circle', { class: 'walker-dot', r: walkerRadius }, walker);
 
   let lastS = -1;
   return {
     debugLayer,
-    render(s, walkerAt, mode) {
+    render(s, walkerAt, mode, hintVisible = false) {
       if (s !== lastS) {
-        walked.setAttribute('d', pathToD(slicePath(lab.segments, s)));
+        walked.setAttribute('d', s > 0 ? pathToD(slicePath(lab.segments, s)) : '');
         lastS = s;
       }
       walker.setAttribute('transform', `translate(${walkerAt.x.toFixed(2)} ${walkerAt.y.toFixed(2)})`);
       svg.dataset.mode = mode;
+      svg.dataset.hint = hintVisible ? '1' : '0';
     },
   };
 }

@@ -10,7 +10,7 @@
 - **`vite.config.ts` 设置 `base: './'`：** 以后部署到 GitHub Pages 的子路径时无需修改。
 - **分层：** 规则与几何放在 `src/logic/`，不引用 DOM，用 Vitest 在 Node 环境测试。视图层和输入层只负责调用规则模块和绘制。
 - **调参：** 所有可调参数集中在 `src/config/tuning.ts`。
-- **Git：** 本项目暂未初始化仓库，由开发者以后在本文件夹内手动执行 `git init`。
+- **Git：** 本项目已于 2026-11-12 完成本地 Git 仓库初始化与基准提交（main 分支，commit 24f26ae）。
 
 已确定的设计选择：
 
@@ -91,6 +91,8 @@ labyrinth-walk/
 │  │  ├─ labyrinth.ts       # 参数 → 段列表 → SVG d 字符串
 │  │  ├─ pathTrack.ts       # 采样折线、累计长度、窗口内投影
 │  │  ├─ walker.ts          # 行走状态机
+│  │  ├─ deviationController.ts # 偏离延时提示与振动调度 (Task 5)
+│  │  ├─ duration.ts        # 用时格式化 (Task 6)
 │  │  └─ atmosphere.ts      # 进度 → 颜色与强度
 │  ├─ view/
 │  │  ├─ svgScene.ts        # 小路、已走高亮、行者、中心

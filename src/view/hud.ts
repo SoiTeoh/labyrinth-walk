@@ -4,9 +4,15 @@ import { svgEl } from './svg';
 export interface Hud {
   /** p 是 0 到 1 的进度 */
   render(p: number): void;
+  /** 设置偏离提示是否显示 */
+  setHint(visible: boolean, text?: string): void;
 }
 
-export function createHud(svg: SVGSVGElement, t: Tuning): Hud {
+export function createHud(
+  svg: SVGSVGElement,
+  t: Tuning,
+  onResetRequest?: () => void,
+): Hud {
   const { width, height, progressBarWidth, progressBarY } = t.view;
   const cx = width / 2;
   const barX = cx - progressBarWidth / 2;
@@ -14,28 +20,81 @@ export function createHud(svg: SVGSVGElement, t: Tuning): Hud {
   svgEl('text', { class: 'hud-title', x: cx, y: 44, 'text-anchor': 'middle' }, svg).textContent =
     '沿小路走到中心';
 
-  const percent = svgEl('text', { class: 'hud-percent', x: cx, y: 74, 'text-anchor': 'middle' }, svg);
-  svgEl('rect', {
-    class: 'hud-bar-track',
-    x: barX,
-    y: progressBarY,
-    width: progressBarWidth,
-    height: 4,
-    rx: 2,
-  }, svg);
-  const fill = svgEl('rect', {
-    class: 'hud-bar-fill',
-    x: barX,
-    y: progressBarY,
-    width: 0,
-    height: 4,
-    rx: 2,
-  }, svg);
+  // 主动重开按钮
+  if (onResetRequest) {
+    const resetBtn = svgEl(
+      'text',
+      {
+        class: 'hud-reset',
+        x: width - 16,
+        y: 44,
+        'text-anchor': 'end',
+        role: 'button',
+        tabindex: '0',
+        'aria-label': '重新开始',
+      },
+      svg,
+    );
+    resetBtn.textContent = '重开';
 
-  svgEl('text', { class: 'hud-help', x: cx, y: height - 52, 'text-anchor': 'middle' }, svg).textContent =
-    '按住入口的圆点，沿小路拖动';
+    const triggerReset = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onResetRequest();
+    };
+
+    resetBtn.addEventListener('click', triggerReset);
+    resetBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+    resetBtn.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        triggerReset(e);
+      }
+    });
+  }
+
+  const percent = svgEl('text', { class: 'hud-percent', x: cx, y: 74, 'text-anchor': 'middle' }, svg);
+  svgEl(
+    'rect',
+    {
+      class: 'hud-bar-track',
+      x: barX,
+      y: progressBarY,
+      width: progressBarWidth,
+      height: 4,
+      rx: 2,
+    },
+    svg,
+  );
+  const fill = svgEl(
+    'rect',
+    {
+      class: 'hud-bar-fill',
+      x: barX,
+      y: progressBarY,
+      width: 0,
+      height: 4,
+      rx: 2,
+    },
+    svg,
+  );
+
+  const helpText = svgEl(
+    'text',
+    { class: 'hud-help', x: cx, y: height - 52, 'text-anchor': 'middle' },
+    svg,
+  );
+  helpText.textContent = '按住入口的圆点，沿小路拖动';
+
+  const hintText = svgEl(
+    'text',
+    { class: 'hud-hint', x: cx, y: height - 52, 'text-anchor': 'middle' },
+    svg,
+  );
+  hintText.textContent = t.hint.message;
 
   let lastShown = -1;
+  let isHintActive = false;
+
   return {
     render(p) {
       const clamped = Math.min(Math.max(p, 0), 1);
@@ -46,6 +105,28 @@ export function createHud(svg: SVGSVGElement, t: Tuning): Hud {
         lastShown = shown;
       }
       fill.setAttribute('width', (progressBarWidth * clamped).toFixed(2));
+
+      // 若没有偏离提示，根据行走状态显示引导
+      if (!isHintActive) {
+        if (shown > 0) {
+          helpText.classList.add('hud-help-fade');
+        } else {
+          helpText.classList.remove('hud-help-fade');
+        }
+      }
+    },
+    setHint(visible, text) {
+      isHintActive = visible;
+      if (text) {
+        hintText.textContent = text;
+      }
+      if (visible) {
+        hintText.classList.add('visible');
+        helpText.classList.add('hidden');
+      } else {
+        hintText.classList.remove('visible');
+        helpText.classList.remove('hidden');
+      }
     },
   };
 }
