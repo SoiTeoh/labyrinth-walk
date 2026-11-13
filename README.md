@@ -4,7 +4,9 @@
 
 这不是找出口的迷宫，整条路只有一条，不会走错岔路。本作品是休闲互动小游戏。
 
-> 状态：原型阶段。已完成 PROJECT_PLAN.md 的 Task 1–7（小路生成、窗口投影、拖动行走、偏离提示、完成结算与重开、随进度渐变晨光氛围与 25%/50%/75% 里程碑光点）。
+> 状态：**Prototype Complete — Pending Playtest**
+> - Task 1–7 已完成；Task 8A 自动化验证已完成（完整调试视图、URL 安全调参、无障碍与质量检查）。
+> - Task 8B 真人试玩与真机验收尚未完成，暂时不部署，不添加新功能。
 > 真机调参见 `TODO.md`。
 
 ## 操作
@@ -41,11 +43,14 @@ npm run build      # 类型检查 + 生产构建，输出到 dist/
 npm run preview    # 本地预览 dist/
 ```
 
-调试视图：地址后加 `?debug=1`，例如 `http://localhost:5173/?debug=1`。屏幕上会画出指针到"当前窗口内投影点"的连线，并在左下角显示距离 `d` 和路程 `s`。连线为蓝色表示在容错范围内，红色表示超出。
+调试视图与安全调参：
+- `?debug=1`：开启调试层，在画面上实时绘制局部搜索窗口高亮、抓取半径圈、路径容错范围圈、触摸点与投影点连线，并在左下角显示行走状态、进度、`s/total`、坐标及距离 `d`。
+- URL 安全调参：支持通过查询参数临时覆盖 `tolerance`（6–60）、`grabRadius`（10–120）与 `rings`（整数 1–7），例如 `?tolerance=30&grabRadius=60&rings=5`。非法类型或越界参数会自动回退默认值。
 
 ## 代码结构
 
 - `src/config/tuning.ts`：全部可调参数（圈数、路宽、容错、搜索窗口等）
+- `src/config/tuningQuery.ts`：URL 查询参数安全解析与范围校验（`debug`、`tolerance`、`grabRadius`、`rings`）
 - `src/logic/`：纯逻辑，不依赖 DOM
   - `geometry.ts`：线段、圆弧、长度、取点、生成 SVG `d`
   - `labyrinth.ts`：根据参数生成环行小路

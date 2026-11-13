@@ -99,4 +99,13 @@ export const tuning = {
   },
 } as const;
 
-export type Tuning = typeof tuning;
+type DeepWiden<T> = T extends number
+  ? number
+  : T extends readonly (infer U)[]
+    ? readonly DeepWiden<U>[]
+    : T extends object
+      ? { [K in keyof T]: DeepWiden<T[K]> }
+      : T;
+
+export type RuntimeTuning = DeepWiden<typeof tuning>;
+export type Tuning = RuntimeTuning;

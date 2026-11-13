@@ -1,8 +1,9 @@
 import './style.css';
-import { tuning } from './config/tuning';
+import { parseTuningFromSearch } from './config/tuningQuery';
 import { expandPointerEvent, toSvgPoint } from './input/pointer';
 import { createDeviationController } from './logic/deviationController';
 import { formatDuration } from './logic/duration';
+import type { Vec } from './logic/geometry';
 import { buildLabyrinth } from './logic/labyrinth';
 import { createTrack, projectInWindow } from './logic/pathTrack';
 import {
@@ -22,12 +23,18 @@ import { createScene } from './view/svgScene';
 const svg = document.querySelector<SVGSVGElement>('#stage');
 if (!svg) throw new Error('缺少 #stage');
 
-const lab = buildLabyrinth(tuning.maze, { x: tuning.view.centerX, y: tuning.view.centerY });
-const track = createTrack(lab.segments, tuning.track.sampleStep);
-const scene = createScene(svg, lab, track, tuning);
+const { tuning: runtimeTuning, debug: isDebug } = parseTuningFromSearch(location.search);
+
+const lab = buildLabyrinth(runtimeTuning.maze, {
+  x: runtimeTuning.view.centerX,
+  y: runtimeTuning.view.centerY,
+});
+const track = createTrack(lab.segments, runtimeTuning.track.sampleStep);
+const scene = createScene(svg, lab, track, runtimeTuning);
 
 let state: WalkerState = createWalker();
 let activePointer: number | null = null;
+let lastPointer: Vec | null = null;
 let frameRequested = false;
 let startTime: number | null = null;
 let endTime: number | null = null;
@@ -35,6 +42,7 @@ let endTime: number | null = null;
 function restart(): void {
   state = createWalker();
   activePointer = null;
+  lastPointer = null;
   startTime = null;
   endTime = null;
   deviationController.reset();
@@ -54,13 +62,13 @@ function handleResetRequest(): void {
   }
 }
 
-const hud = createHud(svg, tuning, handleResetRequest);
-const completeOverlay = createCompleteOverlay(svg, tuning, restart);
+const hud = createHud(svg, runtimeTuning, handleResetRequest);
+const completeOverlay = createCompleteOverlay(svg, runtimeTuning, restart);
 
 const deviationController = createDeviationController({
-  delayMs: tuning.hint.delayMs,
+  delayMs: runtimeTuning.hint.delayMs,
   onHintShow: () => {
-    hud.setHint(true, tuning.hint.message);
+    hud.setHint(true, runtimeTuning.hint.message);
     scheduleRender();
   },
   onHintHide: () => {
@@ -76,22 +84,43 @@ const deviationController = createDeviationController({
   },
 });
 
-const debug =
-  new URLSearchParams(location.search).get('debug') === '1'
-    ? createDebugView(scene.debugLayer, { x: 12, y: tuning.view.height - 16 })
+const debug = isDebug ? createDebugView(scene.debugLayer, runtimeTuning.view) : null;
+
+function renderDebug(walkerPos: Vec): void {
+  if (!debug) return;
+  const { searchBack, searchForward, tolerance, grabRadius } = runtimeTuning.walk;
+  const proj = lastPointer
+    ? projectInWindow(track, lastPointer, state.s - searchBack, state.s + searchForward)
     : null;
+  debug.render({
+    mode: state.mode,
+    s: state.s,
+    total: track.total,
+    walker: walkerPos,
+    pointer: lastPointer,
+    proj,
+    withinTolerance: proj ? proj.distance <= tolerance : true,
+    grabRadius,
+    tolerance,
+    searchBack,
+    searchForward,
+    track,
+  });
+}
 
 function render(): void {
   frameRequested = false;
   const p = progress(state, track);
+  const walkerPos = walkerPosition(state, track);
   scene.render(
     state.s,
-    walkerPosition(state, track),
+    walkerPos,
     state.mode,
     deviationController.isHintVisible(),
     p,
   );
   hud.render(p);
+  renderDebug(walkerPos);
 }
 
 function scheduleRender(): void {
@@ -113,8 +142,12 @@ svg.addEventListener('pointerdown', (e) => {
   if (activePointer !== null) return; // 只跟踪第一根手指
   const p = toSvgPoint(svg, e.clientX, e.clientY);
   if (!p) return;
-  const next = press(state, track, p, tuning.walk);
-  if (next === state) return; // 没有按在行者附近
+  lastPointer = p;
+  const next = press(state, track, p, runtimeTuning.walk);
+  if (next === state) {
+    if (debug) renderDebug(walkerPosition(state, track));
+    return; // 没有按在行者附近
+  }
   e.preventDefault();
 
   if (startTime === null) {
@@ -126,7 +159,7 @@ svg.addEventListener('pointerdown', (e) => {
   state = next;
 
   // 处理 18~32 抓取体验：若按下点虽在抓取圈内但偏离路径容错，启动偏离计时
-  const { searchBack, searchForward, tolerance } = tuning.walk;
+  const { searchBack, searchForward, tolerance } = runtimeTuning.walk;
   const proj = projectInWindow(track, p, state.s - searchBack, state.s + searchForward);
   if (proj.distance > tolerance) {
     deviationController.update('off');
@@ -141,9 +174,8 @@ svg.addEventListener('pointermove', (e) => {
   if (debug) {
     const p = toSvgPoint(svg, e.clientX, e.clientY);
     if (p) {
-      const { searchBack, searchForward, tolerance } = tuning.walk;
-      const proj = projectInWindow(track, p, state.s - searchBack, state.s + searchForward);
-      debug.render(p, proj, track.total, proj.distance <= tolerance);
+      lastPointer = p;
+      renderDebug(walkerPosition(state, track));
     }
   }
   if (e.pointerId !== activePointer) return;
@@ -151,7 +183,10 @@ svg.addEventListener('pointermove', (e) => {
 
   for (const ev of expandPointerEvent(e)) {
     const p = toSvgPoint(svg, ev.clientX, ev.clientY);
-    if (p) state = move(state, track, p, tuning.walk);
+    if (p) {
+      lastPointer = p;
+      state = move(state, track, p, runtimeTuning.walk);
+    }
   }
 
   if (state.mode === 'completed') {
@@ -172,7 +207,7 @@ function endPointer(e: PointerEvent): void {
   activePointer = null;
 
   if (state.mode !== 'completed') {
-    state = release(state, track, tuning.walk.completeThreshold);
+    state = release(state, track, runtimeTuning.walk.completeThreshold);
     if (state.mode === 'completed') {
       handleCompletion();
     } else {

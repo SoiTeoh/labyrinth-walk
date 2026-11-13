@@ -83,4 +83,37 @@ describe('buildLabyrinth', () => {
     expect(() => buildLabyrinth({ ...maze, gapAngle: 0 }, center)).toThrow();
     expect(() => buildLabyrinth({ ...maze, ringSpacing: -1 }, center)).toThrow();
   });
+
+  it('所有安全调参圈数 (rings = 1..7) 均不自交、不断裂且完整落在 SVG 可视区域内', () => {
+    const halfStroke = maze.pathWidth / 2;
+    const minGap = maze.pathWidth + 4;
+    const farAlongPath = 3 * maze.ringSpacing;
+
+    for (let rings = 1; rings <= 7; rings++) {
+      const l = buildLabyrinth({ ...maze, rings }, center);
+      // 1. 段首尾连续不断裂
+      for (let i = 0; i + 1 < l.segments.length; i++) {
+        expect(distance(segmentEnd(l.segments[i]), segmentStart(l.segments[i + 1]))).toBeLessThan(1e-6);
+      }
+
+      // 2. 采样点及路径宽度完全落在 360x640 可视区域内
+      const track = createTrack(l.segments, 3);
+      for (const pt of track.points) {
+        expect(pt.x - halfStroke).toBeGreaterThanOrEqual(0);
+        expect(pt.x + halfStroke).toBeLessThanOrEqual(tuning.view.width);
+        expect(pt.y - halfStroke).toBeGreaterThanOrEqual(0);
+        expect(pt.y + halfStroke).toBeLessThanOrEqual(tuning.view.height);
+      }
+
+      // 3. 不自交
+      let worst = Infinity;
+      for (let i = 0; i < track.points.length; i++) {
+        for (let j = i + 1; j < track.points.length; j++) {
+          if (track.lengths[j] - track.lengths[i] <= farAlongPath) continue;
+          worst = Math.min(worst, distance(track.points[i], track.points[j]));
+        }
+      }
+      expect(worst).toBeGreaterThanOrEqual(minGap);
+    }
+  });
 });

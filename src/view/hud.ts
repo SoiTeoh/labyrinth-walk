@@ -20,22 +20,41 @@ export function createHud(
   svgEl('text', { class: 'hud-title', x: cx, y: 44, 'text-anchor': 'middle' }, svg).textContent =
     '沿小路走到中心';
 
-  // 主动重开按钮
+  // 主动重开按钮（含足够触控热区）
   if (onResetRequest) {
-    const resetBtn = svgEl(
-      'text',
+    const resetGroup = svgEl(
+      'g',
       {
         class: 'hud-reset',
-        x: width - 16,
-        y: 44,
-        'text-anchor': 'end',
         role: 'button',
         tabindex: '0',
         'aria-label': '重新开始',
       },
       svg,
     );
-    resetBtn.textContent = '重开';
+    svgEl(
+      'rect',
+      {
+        class: 'hud-reset-hit',
+        x: width - 68,
+        y: 20,
+        width: 60,
+        height: 40,
+        rx: 8,
+      },
+      resetGroup,
+    );
+    const resetLabel = svgEl(
+      'text',
+      {
+        class: 'hud-reset-label',
+        x: width - 16,
+        y: 44,
+        'text-anchor': 'end',
+      },
+      resetGroup,
+    );
+    resetLabel.textContent = '重开';
 
     const triggerReset = (e: Event) => {
       e.preventDefault();
@@ -43,9 +62,9 @@ export function createHud(
       onResetRequest();
     };
 
-    resetBtn.addEventListener('click', triggerReset);
-    resetBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
-    resetBtn.addEventListener('keydown', (e: KeyboardEvent) => {
+    resetGroup.addEventListener('click', triggerReset);
+    resetGroup.addEventListener('pointerdown', (e) => e.stopPropagation());
+    resetGroup.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ') {
         triggerReset(e);
       }
