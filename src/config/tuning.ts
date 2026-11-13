@@ -71,6 +71,32 @@ export const tuning = {
     title: '你走到了中心',
     buttonText: '再走一次',
   },
+  atmosphere: {
+    /** 0% 与 100% 视觉氛围停靠点（各通道单调过渡） */
+    stops: {
+      0: {
+        bg: '#1d2430',
+        path: '#8d96a6',
+        walked: '#f0c27a',
+        goal: '#3a4558',
+      },
+      1: {
+        bg: '#44302c',
+        path: '#a89f92',
+        walked: '#ffd18b',
+        goal: '#70483c',
+      },
+    },
+    /** 中心渐强光晕半径与不透明度 */
+    centerGlow: {
+      startRadius: 24,
+      endRadius: 44,
+      startOpacity: 0.08,
+      endOpacity: 0.48,
+    },
+    /** 里程碑阈值位置 */
+    milestones: [0.25, 0.5, 0.75] as const,
+  },
 } as const;
 
 export type Tuning = typeof tuning;

@@ -24,7 +24,7 @@ if (!svg) throw new Error('缺少 #stage');
 
 const lab = buildLabyrinth(tuning.maze, { x: tuning.view.centerX, y: tuning.view.centerY });
 const track = createTrack(lab.segments, tuning.track.sampleStep);
-const scene = createScene(svg, lab, tuning);
+const scene = createScene(svg, lab, track, tuning);
 
 let state: WalkerState = createWalker();
 let activePointer: number | null = null;
@@ -83,13 +83,15 @@ const debug =
 
 function render(): void {
   frameRequested = false;
+  const p = progress(state, track);
   scene.render(
     state.s,
     walkerPosition(state, track),
     state.mode,
     deviationController.isHintVisible(),
+    p,
   );
-  hud.render(progress(state, track));
+  hud.render(p);
 }
 
 function scheduleRender(): void {
